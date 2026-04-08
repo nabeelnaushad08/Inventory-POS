@@ -8,7 +8,7 @@ interface Product {
   name: string
   stock_quantity: number
   min_stock_level: number
-  image_url: string | null
+  image_url?: string | null
   categories?: { name: string } | null
 }
 

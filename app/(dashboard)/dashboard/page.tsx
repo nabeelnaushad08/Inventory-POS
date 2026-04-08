@@ -130,7 +130,14 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RecentSales sales={(recentSales ?? []) as Parameters<typeof RecentSales>[0]["sales"]} />
+          <RecentSales sales={(recentSales ?? []) as {
+            id: string
+            invoice_number: string
+            total: number
+            payment_type: string
+            created_at: string
+            cashier?: { name: string } | null
+          }[]} />
         </div>
         <div>
           <LowStockAlert products={trulyLowStock} />

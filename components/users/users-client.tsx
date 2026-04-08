@@ -70,23 +70,21 @@ export function UsersClient({ users: initial, currentUserId }: UsersClientProps)
     if (!inviteEmail || !inviteName || !invitePassword) return
     setIsLoading(true)
     try {
-      // Create auth user via admin SDK — in production use a server action
-      // Here we sign up with email/password as demo
-      const { data, error } = await supabase.auth.admin?.createUser({
+      const { error } = await supabase.auth.signUp({
         email: inviteEmail,
         password: invitePassword,
-        user_metadata: { name: inviteName, role: inviteRole },
-        email_confirm: true,
-      }) as { data: { user: { id: string } } | null; error: Error | null } ?? { data: null, error: null }
+        options: {
+          data: { name: inviteName, role: inviteRole },
+        },
+      })
 
       if (error) {
-        // Fallback: just add to profiles (demo mode)
-        toast({
-          title: "Note",
-          description: "In production, use Supabase admin to create users. Profile created in demo mode.",
-        })
+        toast({ title: "Error", description: error.message, variant: "destructive" })
       } else {
-        toast({ title: "User invited", description: `${inviteName} has been added.` })
+        toast({
+          title: "User invited",
+          description: `${inviteName} has been sent a confirmation email.`,
+        })
         setShowInvite(false)
         setInviteEmail("")
         setInviteName("")
