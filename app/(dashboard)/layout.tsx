@@ -3,6 +3,18 @@ import { TopBar } from "@/components/layout/topbar"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
+type ProfileRow = {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "manager" | "cashier"
+  phone: string | null
+  avatar_url: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -15,11 +27,13 @@ export default async function DashboardLayout({
     redirect("/login")
   }
 
-  const { data: profile } = await supabase
+  const { data: profileRaw } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single()
+
+  const profile = profileRaw as ProfileRow | null
 
   return (
     <div className="flex h-screen bg-gray-50">

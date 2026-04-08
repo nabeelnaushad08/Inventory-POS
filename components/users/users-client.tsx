@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Tables } from "@/lib/supabase/database.types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -13,9 +12,19 @@ import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
-import { Plus, Edit, UserX, Shield, Users, UserCheck, Loader2 } from "lucide-react"
+import { Plus, Edit, Shield, Users, UserCheck, Loader2 } from "lucide-react"
 
-type Profile = Tables<"profiles">
+type Profile = {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "manager" | "cashier"
+  phone: string | null
+  avatar_url: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
 interface UsersClientProps {
   users: Profile[]

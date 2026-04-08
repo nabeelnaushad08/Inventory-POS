@@ -13,12 +13,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Bell, LogOut, User, Settings } from "lucide-react"
-import type { Tables } from "@/lib/supabase/database.types"
+import { Bell, LogOut, Settings } from "lucide-react"
 import Link from "next/link"
 
+type ProfileRow = {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatar_url: string | null
+}
+
 interface TopBarProps {
-  user: Tables<"profiles"> | null
+  user: ProfileRow | null
 }
 
 const roleColors: Record<string, string> = {
