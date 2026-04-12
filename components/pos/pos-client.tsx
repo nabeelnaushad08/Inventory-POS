@@ -1,33 +1,26 @@
-"use client"
+'use client'
 
-import { useState, useCallback } from "react"
-import { ProductGrid } from "./product-grid"
-import { Cart } from "./cart"
-import { PaymentModal } from "./payment-modal"
-import { HeldBillsModal } from "./held-bills-modal"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { usePOSStore } from "@/lib/store/pos-store"
-import { Tables } from "@/lib/supabase/database.types"
-import { Search, PauseCircle, Barcode } from "lucide-react"
-
-type Product = Tables<"products"> & {
-  categories?: { name: string; color: string | null } | null
-}
-
-type Category = Tables<"categories">
-type Settings = Tables<"store_settings"> | null
+import { useState, useCallback } from 'react'
+import { ProductGrid } from './product-grid'
+import { Cart } from './cart'
+import { PaymentModal } from './payment-modal'
+import { HeldBillsModal } from './held-bills-modal'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { usePOSStore } from '@/lib/store/pos-store'
+import { Search, PauseCircle, Barcode } from 'lucide-react'
+import type { ProductWithCategory, Category, StoreSettings } from '@/types'
 
 interface POSClientProps {
-  products: Product[]
+  products: ProductWithCategory[]
   categories: Category[]
-  settings: Settings
+  settings: StoreSettings | null
 }
 
 export function POSClient({ products, categories, settings }: POSClientProps) {
-  const [search, setSearch] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showPayment, setShowPayment] = useState(false)
   const [showHeld, setShowHeld] = useState(false)
 
@@ -35,24 +28,24 @@ export function POSClient({ products, categories, settings }: POSClientProps) {
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
-      search === "" ||
+      search === '' ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.barcode?.includes(search) ||
       p.sku?.toLowerCase().includes(search.toLowerCase())
     const matchesCategory =
-      selectedCategory === "all" || p.category_id === selectedCategory
+      selectedCategory === 'all' || p.category_id === selectedCategory
     return matchesSearch && matchesCategory && p.stock_quantity > 0
   })
 
   const handleBarcodeSearch = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter" && search.length > 0) {
+      if (e.key === 'Enter' && search.length > 0) {
         const product = products.find(
           (p) => p.barcode === search || p.sku === search
         )
         if (product) {
           usePOSStore.getState().addToCart(product)
-          setSearch("")
+          setSearch('')
         }
       }
     },
@@ -78,13 +71,17 @@ export function POSClient({ products, categories, settings }: POSClientProps) {
             {search && (
               <button
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setSearch("")}
+                onClick={() => setSearch('')}
               >
                 ×
               </button>
             )}
           </div>
-          <Button variant="outline" size="icon" className="h-11 w-11 bg-white border-0 shadow-sm">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-11 w-11 bg-white border-0 shadow-sm"
+          >
             <Barcode className="h-4 w-4" />
           </Button>
           <Button
@@ -103,13 +100,13 @@ export function POSClient({ products, categories, settings }: POSClientProps) {
         </div>
 
         {/* Category Filter */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           <button
-            onClick={() => setSelectedCategory("all")}
+            onClick={() => setSelectedCategory('all')}
             className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-              selectedCategory === "all"
-                ? "bg-primary text-white shadow-sm"
-                : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+              selectedCategory === 'all'
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm'
             }`}
           >
             All ({products.length})
@@ -123,8 +120,8 @@ export function POSClient({ products, categories, settings }: POSClientProps) {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
                   selectedCategory === cat.id
-                    ? "bg-primary text-white shadow-sm"
-                    : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm'
                 }`}
               >
                 {cat.name} ({count})
@@ -141,22 +138,16 @@ export function POSClient({ products, categories, settings }: POSClientProps) {
 
       {/* Right: Cart */}
       <div className="w-96 shrink-0 flex flex-col">
-        <Cart
-          settings={settings}
-          onCheckout={() => setShowPayment(true)}
-        />
+        <Cart settings={settings} onCheckout={() => setShowPayment(true)} />
       </div>
 
-      {/* Modals */}
       {showPayment && (
         <PaymentModal
           settings={settings}
           onClose={() => setShowPayment(false)}
         />
       )}
-      {showHeld && (
-        <HeldBillsModal onClose={() => setShowHeld(false)} />
-      )}
+      {showHeld && <HeldBillsModal onClose={() => setShowHeld(false)} />}
     </div>
   )
 }

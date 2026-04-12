@@ -1,13 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import { Trophy } from "lucide-react"
+import type { TopProductRow } from "@/types"
 
 interface TopProductsProps {
-  products: {
-    product_name: string
-    quantity: number
-    total: number
-  }[]
+  products: TopProductRow[]
 }
 
 const medals = ["🥇", "🥈", "🥉", "4th", "5th"]

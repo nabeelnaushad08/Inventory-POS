@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Tables } from "@/lib/supabase/database.types"
+import type { ProductWithCategoryWithCategory, Category } from "@/types"
 import { formatCurrency, getStockStatus, getProfitMargin } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ProductFormModal } from "./product-form-modal"
+import { ProductWithCategoryFormModal } from "./product-form-modal"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -27,21 +27,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 
-type Product = Tables<"products"> & {
-  categories?: { id: string; name: string; color: string | null } | null
+interface ProductWithCategorysClientProps {
+  products: ProductWithCategoryWithCategory[]
+  categories: Category[]
 }
 
-interface ProductsClientProps {
-  products: Product[]
-  categories: Tables<"categories">[]
-}
-
-export function ProductsClient({ products: initial, categories }: ProductsClientProps) {
-  const [products, setProducts] = useState(initial)
+export function ProductWithCategorysClient({ products: initial, categories }: ProductWithCategorysClientProps) {
+  const [products, setProductWithCategorys] = useState(initial)
   const [search, setSearch] = useState("")
   const [showForm, setShowForm] = useState(false)
-  const [editProduct, setEditProduct] = useState<Product | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
+  const [editProductWithCategory, setEditProductWithCategory] = useState<ProductWithCategory | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ProductWithCategory | null>(null)
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -52,8 +48,8 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
       p.barcode?.includes(search)
   )
 
-  const handleProductSaved = (product: Product) => {
-    setProducts((prev) => {
+  const handleProductWithCategorySaved = (product: ProductWithCategory) => {
+    setProductWithCategorys((prev) => {
       const idx = prev.findIndex((p) => p.id === product.id)
       if (idx >= 0) {
         const updated = [...prev]
@@ -63,7 +59,7 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
       return [product, ...prev]
     })
     setShowForm(false)
-    setEditProduct(null)
+    setEditProductWithCategory(null)
   }
 
   const handleDelete = async () => {
@@ -76,8 +72,8 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" })
     } else {
-      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id))
-      toast({ title: "Product deleted", description: `${deleteTarget.name} has been removed.` })
+      setProductWithCategorys((prev) => prev.filter((p) => p.id !== deleteTarget.id))
+      toast({ title: "ProductWithCategory deleted", description: `${deleteTarget.name} has been removed.` })
     }
     setDeleteTarget(null)
   }
@@ -86,12 +82,12 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <h1 className="text-2xl font-bold text-gray-900">ProductWithCategorys</h1>
           <p className="text-muted-foreground text-sm mt-1">{products.length} products total</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Product
+          Add ProductWithCategory
         </Button>
       </div>
 
@@ -106,7 +102,7 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
         />
       </div>
 
-      {/* Product Grid */}
+      {/* ProductWithCategory Grid */}
       {filtered.length === 0 ? (
         <div className="text-center py-16">
           <Package className="h-12 w-12 text-gray-200 mx-auto mb-3" />
@@ -126,7 +122,7 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
                 key={product.id}
                 className="bg-white rounded-xl shadow-sm border border-transparent hover:border-gray-200 hover:shadow-md transition-all overflow-hidden group"
               >
-                {/* Product image */}
+                {/* ProductWithCategory image */}
                 <div className="relative aspect-square bg-gray-100">
                   {product.image_url ? (
                     <Image
@@ -144,7 +140,7 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
                   {/* Action overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                     <button
-                      onClick={() => { setEditProduct(product); setShowForm(true) }}
+                      onClick={() => { setEditProductWithCategory(product); setShowForm(true) }}
                       className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow hover:bg-blue-50 transition-colors"
                     >
                       <Edit className="h-4 w-4 text-blue-600" />
@@ -164,7 +160,7 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
                   </div>
                 </div>
 
-                {/* Product info */}
+                {/* ProductWithCategory info */}
                 <div className="p-4">
                   <p className="font-semibold text-gray-900 text-sm line-clamp-2 min-h-[2.5rem]">
                     {product.name}
@@ -200,13 +196,13 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
         </div>
       )}
 
-      {/* Product Form Modal */}
+      {/* ProductWithCategory Form Modal */}
       {showForm && (
-        <ProductFormModal
-          product={editProduct}
+        <ProductWithCategoryFormModal
+          product={editProductWithCategory}
           categories={categories}
-          onSaved={handleProductSaved}
-          onClose={() => { setShowForm(false); setEditProduct(null) }}
+          onSaved={handleProductWithCategorySaved}
+          onClose={() => { setShowForm(false); setEditProductWithCategory(null) }}
         />
       )}
 
@@ -217,7 +213,7 @@ export function ProductsClient({ products: initial, categories }: ProductsClient
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-600">
                 <AlertCircle className="h-5 w-5" />
-                Delete Product
+                Delete ProductWithCategory
               </DialogTitle>
             </DialogHeader>
             <p className="text-sm text-gray-600">

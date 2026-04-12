@@ -2,17 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import type { Product } from "@/types"
 
-interface Product {
-  id: string
-  name: string
-  stock_quantity: number
-  min_stock_level: number
-  image_url?: string | null
-  categories?: { name: string } | null
-}
-
-export function LowStockAlert({ products }: { products: Product[] }) {
+export function LowStockAlert({ products }: { products: Pick<Product, 'id' | 'name' | 'stock_quantity' | 'min_stock_level'>[] }) {
   return (
     <Card className="border-0 shadow-sm h-full">
       <CardHeader className="pb-2">

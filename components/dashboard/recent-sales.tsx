@@ -3,15 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatDateTime } from "@/lib/utils"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-
-interface Sale {
-  id: string
-  invoice_number: string
-  total: number
-  payment_type: string
-  created_at: string
-  cashier?: { name: string } | null
-}
+import type { SaleWithCashier } from "@/types"
 
 const paymentBadge: Record<string, { label: string; variant: "default" | "secondary" | "success" | "warning" }> = {
   cash: { label: "Cash", variant: "success" },
@@ -19,7 +11,7 @@ const paymentBadge: Record<string, { label: string; variant: "default" | "second
   mixed: { label: "Mixed", variant: "warning" },
 }
 
-export function RecentSales({ sales }: { sales: Sale[] }) {
+export function RecentSales({ sales }: { sales: SaleWithCashier[] }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">

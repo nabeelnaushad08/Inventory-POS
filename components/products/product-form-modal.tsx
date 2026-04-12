@@ -12,13 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Tables } from "@/lib/supabase/database.types"
+import type { ProductWithCategory, Category } from "@/types"
 import { Loader2, ImageOff } from "lucide-react"
 import Image from "next/image"
-
-type Product = Tables<"products"> & {
-  categories?: { id: string; name: string; color: string | null } | null
-}
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -37,9 +33,9 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 interface ProductFormModalProps {
-  product: Product | null
-  categories: Tables<"categories">[]
-  onSaved: (product: Product) => void
+  product: ProductWithCategory | null
+  categories: Category[]
+  onSaved: (product: ProductWithCategory) => void
   onClose: () => void
 }
 
@@ -82,7 +78,7 @@ export function ProductFormModal({ product, categories, onSaved, onClose }: Prod
   const onSubmit = async (data: FormData) => {
     setIsLoading(true)
     try {
-      let image_url = product?.image_url ?? null
+      let image_url: string | null = product?.image_url ?? null
 
       // Upload image if provided
       if (imageFile) {
@@ -116,7 +112,7 @@ export function ProductFormModal({ product, categories, onSaved, onClose }: Prod
         updated_at: new Date().toISOString(),
       }
 
-      let saved: Product
+      let saved: ProductWithCategory
 
       if (isEdit && product) {
         const { data: updated, error } = await supabase
@@ -126,7 +122,7 @@ export function ProductFormModal({ product, categories, onSaved, onClose }: Prod
           .select("*, categories(id, name, color)")
           .single()
         if (error) throw error
-        saved = updated as Product
+        saved = updated as ProductWithCategory
       } else {
         const { data: created, error } = await supabase
           .from("products")
@@ -134,7 +130,7 @@ export function ProductFormModal({ product, categories, onSaved, onClose }: Prod
           .select("*, categories(id, name, color)")
           .single()
         if (error) throw error
-        saved = created as Product
+        saved = created as ProductWithCategory
       }
 
       toast({

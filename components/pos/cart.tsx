@@ -1,26 +1,16 @@
-"use client"
+'use client'
 
-import { usePOSStore } from "@/lib/store/pos-store"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { formatCurrency } from "@/lib/utils"
-import {
-  Minus,
-  Plus,
-  Trash2,
-  ShoppingCart,
-  Tag,
-  PauseCircle,
-  CreditCard,
-} from "lucide-react"
-import { Tables } from "@/lib/supabase/database.types"
-
-type Settings = Tables<"store_settings"> | null
+import { usePOSStore } from '@/lib/store/pos-store'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { formatCurrency } from '@/lib/utils'
+import { Minus, Plus, Trash2, ShoppingCart, Tag, PauseCircle, CreditCard } from 'lucide-react'
+import type { StoreSettings } from '@/types'
 
 interface CartProps {
-  settings: Settings
+  settings: StoreSettings | null
   onCheckout: () => void
 }
 
@@ -42,7 +32,7 @@ export function Cart({ settings, onCheckout }: CartProps) {
   } = usePOSStore()
 
   const taxRate = settings?.tax_rate ?? 0
-  const currencySymbol = settings?.currency_symbol ?? "Rs."
+  const currencySymbol = settings?.currency_symbol ?? 'Rs.'
 
   const subtotal = getSubtotal()
   const discountAmount = getDiscountAmount()
@@ -51,7 +41,7 @@ export function Cart({ settings, onCheckout }: CartProps) {
 
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-sm overflow-hidden">
-      {/* Cart Header */}
+      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-primary" />
@@ -72,7 +62,7 @@ export function Cart({ settings, onCheckout }: CartProps) {
         )}
       </div>
 
-      {/* Cart Items */}
+      {/* Items */}
       <ScrollArea className="flex-1 cart-scrollbar">
         {cart.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center px-4">
@@ -83,10 +73,7 @@ export function Cart({ settings, onCheckout }: CartProps) {
         ) : (
           <div className="p-3 space-y-2">
             {cart.map((item) => (
-              <div
-                key={item.product.id}
-                className="bg-gray-50 rounded-lg p-3"
-              >
+              <div key={item.product.id} className="bg-gray-50 rounded-lg p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 leading-tight line-clamp-2">
@@ -105,7 +92,6 @@ export function Cart({ settings, onCheckout }: CartProps) {
                 </div>
 
                 <div className="flex items-center justify-between mt-2">
-                  {/* Qty controls */}
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
@@ -113,7 +99,9 @@ export function Cart({ settings, onCheckout }: CartProps) {
                     >
                       <Minus className="h-3 w-3" />
                     </button>
-                    <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
+                    <span className="w-8 text-center text-sm font-bold">
+                      {item.quantity}
+                    </span>
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                       disabled={item.quantity >= item.product.stock_quantity}
@@ -139,33 +127,26 @@ export function Cart({ settings, onCheckout }: CartProps) {
             <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="flex gap-1.5 flex-1">
               <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
-                <button
-                  onClick={() => setDiscountType("percent")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                    discountType === "percent"
-                      ? "bg-white text-primary shadow-sm"
-                      : "text-gray-500"
-                  }`}
-                >
-                  %
-                </button>
-                <button
-                  onClick={() => setDiscountType("fixed")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                    discountType === "fixed"
-                      ? "bg-white text-primary shadow-sm"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {currencySymbol}
-                </button>
+                {(['percent', 'fixed'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setDiscountType(type)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                      discountType === type
+                        ? 'bg-white text-primary shadow-sm'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    {type === 'percent' ? '%' : currencySymbol}
+                  </button>
+                ))}
               </div>
               <Input
                 type="number"
                 min="0"
-                max={discountType === "percent" ? "100" : undefined}
+                max={discountType === 'percent' ? '100' : undefined}
                 placeholder="Discount"
-                value={discount || ""}
+                value={discount || ''}
                 onChange={(e) => setDiscount(Number(e.target.value))}
                 className="h-8 text-sm"
               />
@@ -174,7 +155,7 @@ export function Cart({ settings, onCheckout }: CartProps) {
         </div>
       )}
 
-      {/* Order Summary */}
+      {/* Totals */}
       <div className="p-4 space-y-2">
         <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span>
@@ -188,7 +169,9 @@ export function Cart({ settings, onCheckout }: CartProps) {
         )}
         {taxRate > 0 && (
           <div className="flex justify-between text-sm text-gray-600">
-            <span>{settings?.tax_name ?? "Tax"} ({taxRate}%)</span>
+            <span>
+              {settings?.tax_name ?? 'Tax'} ({taxRate}%)
+            </span>
             <span className="font-medium">{formatCurrency(taxAmount)}</span>
           </div>
         )}
@@ -199,7 +182,7 @@ export function Cart({ settings, onCheckout }: CartProps) {
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <div className="p-4 pt-0 grid grid-cols-2 gap-2">
         <Button
           variant="outline"

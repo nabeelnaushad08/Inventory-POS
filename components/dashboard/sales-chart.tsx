@@ -11,9 +11,10 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { formatCurrency } from "@/lib/utils"
+import type { ChartDataPoint } from "@/types"
 
 interface SalesChartProps {
-  data: { date: string; sales: number }[]
+  data: ChartDataPoint[]
 }
 
 const CustomTooltip = ({ active, payload, label }: {

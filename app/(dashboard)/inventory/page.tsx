@@ -1,50 +1,27 @@
-import { createClient } from "@/lib/supabase/server"
-import { InventoryClient } from "@/components/inventory/inventory-client"
-
-type ProductRow = {
-  id: string
-  name: string
-  description: string | null
-  sku: string | null
-  barcode: string | null
-  category_id: string | null
-  cost_price: number
-  selling_price: number
-  stock_quantity: number
-  min_stock_level: number
-  image_url: string | null
-  supplier: string | null
-  expiry_date: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  categories: { id: string; name: string; color: string | null } | null
-}
-
-type CategoryRow = {
-  id: string
-  name: string
-  description: string | null
-  color: string | null
-  icon: string | null
-  created_at: string
-}
+import { createClient } from '@/lib/supabase/server'
+import { InventoryClient } from '@/components/inventory/inventory-client'
+import type { ProductWithCategory, Category } from '@/types'
 
 export default async function InventoryPage() {
   const supabase = createClient()
 
-  const { data: productsRaw } = await supabase
-    .from("products")
-    .select("*, categories(id, name, color)")
-    .eq("is_active", true)
-    .order("name")
-  const products = (productsRaw ?? []) as ProductRow[]
+  const { data: products } = await supabase
+    .from('products')
+    .select('*, categories(id, name, color)')
+    .eq('is_active', true)
+    .order('name')
+    .returns<ProductWithCategory[]>()
 
-  const { data: categoriesRaw } = await supabase
-    .from("categories")
-    .select("*")
-    .order("name")
-  const categories = (categoriesRaw ?? []) as CategoryRow[]
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name')
+    .returns<Category[]>()
 
-  return <InventoryClient products={products} categories={categories} />
+  return (
+    <InventoryClient
+      products={products ?? []}
+      categories={categories ?? []}
+    />
+  )
 }

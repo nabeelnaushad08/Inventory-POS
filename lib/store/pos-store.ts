@@ -1,36 +1,39 @@
 import { create } from 'zustand'
-import { Tables } from '@/lib/supabase/database.types'
+import type { Product, CartItem, HeldBill, PaymentType } from '@/types'
 
-export type CartItem = {
-  product: Tables<'products'>
-  quantity: number
-  discount: number
-  total: number
-}
+// Re-export so other files can import CartItem from one place
+export type { CartItem } from '@/types'
 
 type POSStore = {
+  // ── State ──────────────────────────────────────────────────
   cart: CartItem[]
   discount: number
   discountType: 'percent' | 'fixed'
-  paymentType: 'cash' | 'card' | 'mixed'
+  paymentType: PaymentType
   amountPaid: number
   notes: string
-  heldBills: { id: string; cart: CartItem[]; createdAt: Date }[]
+  heldBills: HeldBill[]
 
-  addToCart: (product: Tables<'products'>) => void
+  // ── Cart actions ───────────────────────────────────────────
+  addToCart: (product: Product) => void
   removeFromCart: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   updateItemDiscount: (productId: string, discount: number) => void
   clearCart: () => void
+
+  // ── Checkout options ───────────────────────────────────────
   setDiscount: (discount: number) => void
   setDiscountType: (type: 'percent' | 'fixed') => void
-  setPaymentType: (type: 'cash' | 'card' | 'mixed') => void
+  setPaymentType: (type: PaymentType) => void
   setAmountPaid: (amount: number) => void
   setNotes: (notes: string) => void
+
+  // ── Held bills ─────────────────────────────────────────────
   holdBill: () => void
   resumeBill: (id: string) => void
   deleteHeldBill: (id: string) => void
 
+  // ── Computed (call as functions so they're always fresh) ───
   getSubtotal: () => number
   getDiscountAmount: () => number
   getTaxAmount: (taxRate: number) => number
@@ -57,7 +60,10 @@ export const usePOSStore = create<POSStore>((set, get) => ({
             ? {
                 ...item,
                 quantity: item.quantity + 1,
-                total: (item.quantity + 1) * item.product.selling_price * (1 - item.discount / 100),
+                total:
+                  (item.quantity + 1) *
+                  item.product.selling_price *
+                  (1 - item.discount / 100),
               }
             : item
         ),
@@ -66,20 +72,14 @@ export const usePOSStore = create<POSStore>((set, get) => ({
       set({
         cart: [
           ...cart,
-          {
-            product,
-            quantity: 1,
-            discount: 0,
-            total: product.selling_price,
-          },
+          { product, quantity: 1, discount: 0, total: product.selling_price },
         ],
       })
     }
   },
 
-  removeFromCart: (productId) => {
-    set({ cart: get().cart.filter((item) => item.product.id !== productId) })
-  },
+  removeFromCart: (productId) =>
+    set({ cart: get().cart.filter((item) => item.product.id !== productId) }),
 
   updateQuantity: (productId, quantity) => {
     if (quantity <= 0) {
@@ -92,28 +92,33 @@ export const usePOSStore = create<POSStore>((set, get) => ({
           ? {
               ...item,
               quantity,
-              total: quantity * item.product.selling_price * (1 - item.discount / 100),
+              total:
+                quantity *
+                item.product.selling_price *
+                (1 - item.discount / 100),
             }
           : item
       ),
     })
   },
 
-  updateItemDiscount: (productId, discount) => {
+  updateItemDiscount: (productId, discount) =>
     set({
       cart: get().cart.map((item) =>
         item.product.id === productId
           ? {
               ...item,
               discount,
-              total: item.quantity * item.product.selling_price * (1 - discount / 100),
+              total:
+                item.quantity *
+                item.product.selling_price *
+                (1 - discount / 100),
             }
           : item
       ),
-    })
-  },
+    }),
 
-  clearCart: () => {
+  clearCart: () =>
     set({
       cart: [],
       discount: 0,
@@ -121,8 +126,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
       paymentType: 'cash',
       amountPaid: 0,
       notes: '',
-    })
-  },
+    }),
 
   setDiscount: (discount) => set({ discount }),
   setDiscountType: (discountType) => set({ discountType }),
@@ -133,9 +137,11 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   holdBill: () => {
     const { cart, heldBills } = get()
     if (cart.length === 0) return
-    const id = `held-${Date.now()}`
     set({
-      heldBills: [...heldBills, { id, cart: [...cart], createdAt: new Date() }],
+      heldBills: [
+        ...heldBills,
+        { id: `held-${Date.now()}`, cart: [...cart], createdAt: new Date() },
+      ],
       cart: [],
       discount: 0,
       amountPaid: 0,
@@ -147,40 +153,29 @@ export const usePOSStore = create<POSStore>((set, get) => ({
     const { heldBills } = get()
     const bill = heldBills.find((b) => b.id === id)
     if (!bill) return
-    set({
-      cart: bill.cart,
-      heldBills: heldBills.filter((b) => b.id !== id),
-    })
+    set({ cart: bill.cart, heldBills: heldBills.filter((b) => b.id !== id) })
   },
 
-  deleteHeldBill: (id) => {
-    set({ heldBills: get().heldBills.filter((b) => b.id !== id) })
-  },
+  deleteHeldBill: (id) =>
+    set({ heldBills: get().heldBills.filter((b) => b.id !== id) }),
 
-  getSubtotal: () => {
-    return get().cart.reduce((sum, item) => sum + item.total, 0)
-  },
+  getSubtotal: () => get().cart.reduce((sum, item) => sum + item.total, 0),
 
   getDiscountAmount: () => {
     const { discount, discountType, getSubtotal } = get()
     const subtotal = getSubtotal()
-    if (discountType === 'percent') return (subtotal * discount) / 100
-    return Math.min(discount, subtotal)
+    return discountType === 'percent'
+      ? (subtotal * discount) / 100
+      : Math.min(discount, subtotal)
   },
 
   getTaxAmount: (taxRate) => {
-    const { getSubtotal, getDiscountAmount } = get()
-    const taxable = getSubtotal() - getDiscountAmount()
+    const taxable = get().getSubtotal() - get().getDiscountAmount()
     return (taxable * taxRate) / 100
   },
 
-  getTotal: (taxRate) => {
-    const { getSubtotal, getDiscountAmount, getTaxAmount } = get()
-    return getSubtotal() - getDiscountAmount() + getTaxAmount(taxRate)
-  },
+  getTotal: (taxRate) =>
+    get().getSubtotal() - get().getDiscountAmount() + get().getTaxAmount(taxRate),
 
-  getChange: (taxRate) => {
-    const { amountPaid, getTotal } = get()
-    return amountPaid - getTotal(taxRate)
-  },
+  getChange: (taxRate) => get().amountPaid - get().getTotal(taxRate),
 }))

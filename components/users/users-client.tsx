@@ -13,18 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate } from "@/lib/utils"
 import { Plus, Edit, Shield, Users, UserCheck, Loader2 } from "lucide-react"
-
-type Profile = {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "manager" | "cashier"
-  phone: string | null
-  avatar_url: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
+import type { Profile, UserRole } from "@/types"
 
 interface UsersClientProps {
   users: Profile[]
@@ -43,7 +32,7 @@ export function UsersClient({ users: initial, currentUserId }: UsersClientProps)
   const [editUser, setEditUser] = useState<Profile | null>(null)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteName, setInviteName] = useState("")
-  const [inviteRole, setInviteRole] = useState<"admin" | "manager" | "cashier">("cashier")
+  const [inviteRole, setInviteRole] = useState<UserRole>("cashier")
   const [invitePassword, setInvitePassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
@@ -63,7 +52,7 @@ export function UsersClient({ users: initial, currentUserId }: UsersClientProps)
     }
   }
 
-  const handleUpdateRole = async (userId: string, role: "admin" | "manager" | "cashier") => {
+  const handleUpdateRole = async (userId: string, role: UserRole) => {
     const { error } = await supabase
       .from("profiles")
       .update({ role })
@@ -232,7 +221,7 @@ export function UsersClient({ users: initial, currentUserId }: UsersClientProps)
                 <Label className="mb-2 block">Role</Label>
                 <Select
                   defaultValue={editUser.role}
-                  onValueChange={(v) => handleUpdateRole(editUser.id, v as "admin" | "manager" | "cashier")}
+                  onValueChange={(v) => handleUpdateRole(editUser.id, v as UserRole)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -285,7 +274,7 @@ export function UsersClient({ users: initial, currentUserId }: UsersClientProps)
               </div>
               <div>
                 <Label className="mb-2 block">Role</Label>
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as typeof inviteRole)}>
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as UserRole)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

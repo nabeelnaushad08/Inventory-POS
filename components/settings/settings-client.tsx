@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Tables } from "@/lib/supabase/database.types"
+import type { StoreSettings } from "@/types"
 import {
   Store,
   Bell,
@@ -22,8 +22,6 @@ import {
   Loader2,
   Check,
 } from "lucide-react"
-
-type Settings = Tables<"store_settings">
 
 const schema = z.object({
   store_name: z.string().min(1, "Store name is required"),
@@ -42,7 +40,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 interface SettingsClientProps {
-  settings: Settings | null
+  settings: StoreSettings | null
 }
 
 export function SettingsClient({ settings }: SettingsClientProps) {

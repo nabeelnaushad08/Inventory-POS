@@ -1,40 +1,45 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { usePOSStore } from "@/lib/store/pos-store"
-import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/hooks/use-toast"
-import { formatCurrency, generateInvoiceNumber } from "@/lib/utils"
-import { Tables } from "@/lib/supabase/database.types"
-import { Loader2, Check, Banknote, CreditCard, Layers } from "lucide-react"
-import { ReceiptModal } from "./receipt-modal"
-
-type Settings = Tables<"store_settings"> | null
+import { useState } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import { usePOSStore } from '@/lib/store/pos-store'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/hooks/use-toast'
+import { formatCurrency, generateInvoiceNumber } from '@/lib/utils'
+import { Loader2, Check, Banknote, CreditCard, Layers } from 'lucide-react'
+import { ReceiptModal } from './receipt-modal'
+import type { StoreSettings, SaleInsert, SaleItemInsert, StockLogInsert, PaymentType } from '@/types'
 
 interface PaymentModalProps {
-  settings: Settings
+  settings: StoreSettings | null
   onClose: () => void
 }
 
+const PAYMENT_OPTIONS: { type: PaymentType; label: string; icon: React.ElementType; color: string }[] = [
+  { type: 'cash',  label: 'Cash',  icon: Banknote,    color: 'text-green-600'  },
+  { type: 'card',  label: 'Card',  icon: CreditCard,  color: 'text-blue-600'   },
+  { type: 'mixed', label: 'Mixed', icon: Layers,      color: 'text-purple-600' },
+]
+
 export function PaymentModal({ settings, onClose }: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
-  const [completedSale, setCompletedSale] = useState<{ invoiceNumber: string } | null>(null)
+  const [completedInvoice, setCompletedInvoice] = useState<string | null>(null)
 
   const {
     cart,
-    discount,
-    discountType,
     paymentType,
     amountPaid,
     notes,
     setPaymentType,
     setAmountPaid,
-    setNotes,
     clearCart,
     getSubtotal,
     getDiscountAmount,
@@ -45,8 +50,9 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
 
   const { toast } = useToast()
   const supabase = createClient()
+
   const taxRate = settings?.tax_rate ?? 0
-  const currencySymbol = settings?.currency_symbol ?? "Rs."
+  const currencySymbol = settings?.currency_symbol ?? 'Rs.'
 
   const subtotal = getSubtotal()
   const discountAmount = getDiscountAmount()
@@ -54,47 +60,47 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
   const total = getTotal(taxRate)
   const change = getChange(taxRate)
 
-  const paymentOptions = [
-    { type: "cash", label: "Cash", icon: Banknote, color: "text-green-600" },
-    { type: "card", label: "Card", icon: CreditCard, color: "text-blue-600" },
-    { type: "mixed", label: "Mixed", icon: Layers, color: "text-purple-600" },
-  ] as const
-
   const handleProcessPayment = async () => {
-    if (paymentType === "cash" && amountPaid < total) {
-      toast({ title: "Insufficient amount", description: "Amount paid is less than total.", variant: "destructive" })
+    if (paymentType !== 'card' && amountPaid < total) {
+      toast({
+        title: 'Insufficient amount',
+        description: 'Amount paid is less than total.',
+        variant: 'destructive',
+      })
       return
     }
 
     setIsProcessing(true)
-
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
       const invoiceNumber = generateInvoiceNumber()
 
-      // Insert sale
+      const salePayload: SaleInsert = {
+        invoice_number: invoiceNumber,
+        cashier_id: user?.id ?? null,
+        subtotal,
+        discount_amount: discountAmount,
+        tax_amount: taxAmount,
+        total,
+        payment_type: paymentType,
+        amount_paid: paymentType === 'card' ? total : amountPaid,
+        change_amount: paymentType === 'cash' ? Math.max(0, change) : 0,
+        notes: notes || null,
+        status: 'completed',
+      }
+
       const { data: sale, error: saleError } = await supabase
-        .from("sales")
-        .insert({
-          invoice_number: invoiceNumber,
-          cashier_id: user?.id ?? null,
-          subtotal,
-          discount_amount: discountAmount,
-          tax_amount: taxAmount,
-          total,
-          payment_type: paymentType,
-          amount_paid: paymentType === "card" ? total : amountPaid,
-          change_amount: paymentType === "cash" ? Math.max(0, change) : 0,
-          notes: notes || null,
-          status: "completed",
-        })
-        .select()
+        .from('sales')
+        .insert(salePayload)
+        .select('id')
         .single()
 
       if (saleError) throw saleError
 
-      // Insert sale items
-      const saleItems = cart.map((item) => ({
+      const itemsPayload: SaleItemInsert[] = cart.map((item) => ({
         sale_id: sale.id,
         product_id: item.product.id,
         product_name: item.product.name,
@@ -104,46 +110,47 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
         total: item.total,
       }))
 
-      const { error: itemsError } = await supabase.from("sale_items").insert(saleItems)
+      const { error: itemsError } = await supabase
+        .from('sale_items')
+        .insert(itemsPayload)
       if (itemsError) throw itemsError
 
-      // Update stock quantities
+      // Update stock and write logs
       for (const item of cart) {
-        const newQty = item.product.stock_quantity - item.quantity
-        await supabase
-          .from("products")
-          .update({
-            stock_quantity: Math.max(0, newQty),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", item.product.id)
+        const newQty = Math.max(0, item.product.stock_quantity - item.quantity)
 
-        // Log stock change
-        await supabase.from("stock_logs").insert({
+        const { error: stockError } = await supabase
+          .from('products')
+          .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+          .eq('id', item.product.id)
+        if (stockError) throw stockError
+
+        const logPayload: StockLogInsert = {
           product_id: item.product.id,
           change_amount: -item.quantity,
           previous_quantity: item.product.stock_quantity,
-          new_quantity: Math.max(0, newQty),
-          reason: "sale",
+          new_quantity: newQty,
+          reason: 'sale',
           reference_id: sale.id,
           created_by: user?.id ?? null,
-        })
+        }
+        await supabase.from('stock_logs').insert(logPayload)
       }
 
-      setCompletedSale({ invoiceNumber })
+      setCompletedInvoice(invoiceNumber)
       clearCart()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to process payment"
-      toast({ title: "Payment failed", description: message, variant: "destructive" })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to process payment'
+      toast({ title: 'Payment failed', description: message, variant: 'destructive' })
     } finally {
       setIsProcessing(false)
     }
   }
 
-  if (completedSale) {
+  if (completedInvoice) {
     return (
       <ReceiptModal
-        invoiceNumber={completedSale.invoiceNumber}
+        invoiceNumber={completedInvoice}
         settings={settings}
         onClose={onClose}
       />
@@ -171,7 +178,9 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
           )}
           {taxRate > 0 && (
             <div className="flex justify-between text-sm text-gray-600">
-              <span>{settings?.tax_name} ({taxRate}%)</span>
+              <span>
+                {settings?.tax_name} ({taxRate}%)
+              </span>
               <span>{formatCurrency(taxAmount, currencySymbol)}</span>
             </div>
           )}
@@ -182,11 +191,11 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
           </div>
         </div>
 
-        {/* Payment type */}
+        {/* Payment method */}
         <div>
-          <Label className="text-sm font-semibold mb-2 block">Payment Method</Label>
+          <p className="text-sm font-semibold mb-2">Payment Method</p>
           <div className="grid grid-cols-3 gap-2">
-            {paymentOptions.map((opt) => {
+            {PAYMENT_OPTIONS.map((opt) => {
               const Icon = opt.icon
               return (
                 <button
@@ -194,12 +203,20 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
                   onClick={() => setPaymentType(opt.type)}
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
                     paymentType === opt.type
-                      ? "border-primary bg-primary/5"
-                      : "border-gray-200 hover:border-gray-300"
+                      ? 'border-primary bg-primary/5'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className={`h-5 w-5 ${paymentType === opt.type ? "text-primary" : opt.color}`} />
-                  <span className={`text-sm font-semibold ${paymentType === opt.type ? "text-primary" : "text-gray-600"}`}>
+                  <Icon
+                    className={`h-5 w-5 ${
+                      paymentType === opt.type ? 'text-primary' : opt.color
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-semibold ${
+                      paymentType === opt.type ? 'text-primary' : 'text-gray-600'
+                    }`}
+                  >
                     {opt.label}
                   </span>
                 </button>
@@ -208,26 +225,27 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
           </div>
         </div>
 
-        {/* Amount paid (cash/mixed) */}
-        {paymentType !== "card" && (
+        {/* Amount received */}
+        {paymentType !== 'card' && (
           <div>
-            <Label htmlFor="amount-paid" className="text-sm font-semibold mb-2 block">
-              Amount Received
-            </Label>
+            <p className="text-sm font-semibold mb-2">Amount Received</p>
             <Input
-              id="amount-paid"
               type="number"
               min={total}
               step="0.01"
               placeholder={`Min. ${formatCurrency(total, currencySymbol)}`}
-              value={amountPaid || ""}
+              value={amountPaid || ''}
               onChange={(e) => setAmountPaid(Number(e.target.value))}
               className="h-12 text-lg font-semibold"
               autoFocus
             />
-            {/* Quick amount buttons */}
             <div className="flex gap-2 mt-2">
-              {[total, Math.ceil(total / 100) * 100, Math.ceil(total / 500) * 500, Math.ceil(total / 1000) * 1000].map((amount) => (
+              {[
+                total,
+                Math.ceil(total / 100) * 100,
+                Math.ceil(total / 500) * 500,
+                Math.ceil(total / 1000) * 1000,
+              ].map((amount) => (
                 <button
                   key={amount}
                   onClick={() => setAmountPaid(amount)}
@@ -241,7 +259,7 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
         )}
 
         {/* Change */}
-        {paymentType === "cash" && amountPaid > 0 && amountPaid >= total && (
+        {paymentType === 'cash' && amountPaid >= total && amountPaid > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
             <p className="text-sm text-green-700 font-medium">Change to Return</p>
             <p className="text-2xl font-bold text-green-600 mt-1">
@@ -253,7 +271,9 @@ export function PaymentModal({ settings, onClose }: PaymentModalProps) {
         <Button
           onClick={handleProcessPayment}
           className="h-14 text-lg font-bold w-full"
-          disabled={isProcessing || (paymentType !== "card" && amountPaid < total)}
+          disabled={
+            isProcessing || (paymentType !== 'card' && amountPaid < total)
+          }
         >
           {isProcessing ? (
             <>

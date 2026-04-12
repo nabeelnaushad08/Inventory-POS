@@ -7,8 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,39 +19,12 @@ import {
 } from "recharts"
 import { formatCurrency, formatDateTime } from "@/lib/utils"
 import { TrendingUp, DollarSign, ShoppingCart, BarChart2 } from "lucide-react"
-
-interface Sale {
-  id: string
-  invoice_number: string
-  total: number
-  subtotal: number
-  discount_amount: number
-  tax_amount: number
-  payment_type: string
-  status: string
-  created_at: string
-  cashier?: { name: string } | null
-}
-
-interface SaleItem {
-  product_id: string
-  product_name: string
-  quantity: number
-  unit_price: number
-  total: number
-}
-
-interface Product {
-  id: string
-  name: string
-  cost_price: number
-  selling_price: number
-}
+import type { SaleWithCashier, SaleItem, Product } from "@/types"
 
 interface ReportsClientProps {
-  sales: Sale[]
-  saleItems: SaleItem[]
-  products: Product[]
+  sales: SaleWithCashier[]
+  saleItems: Pick<SaleItem, 'product_id' | 'product_name' | 'quantity' | 'unit_price' | 'total'>[]
+  products: Pick<Product, 'id' | 'name' | 'cost_price' | 'selling_price'>[]
 }
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]

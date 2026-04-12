@@ -1,17 +1,13 @@
-"use client"
+'use client'
 
-import Image from "next/image"
-import { usePOSStore } from "@/lib/store/pos-store"
-import { Tables } from "@/lib/supabase/database.types"
-import { formatCurrency } from "@/lib/utils"
-import { Plus, ImageOff } from "lucide-react"
-
-type Product = Tables<"products"> & {
-  categories?: { name: string; color: string | null } | null
-}
+import Image from 'next/image'
+import { usePOSStore } from '@/lib/store/pos-store'
+import { formatCurrency } from '@/lib/utils'
+import { Plus, ImageOff } from 'lucide-react'
+import type { ProductWithCategory } from '@/types'
 
 interface ProductGridProps {
-  products: Product[]
+  products: ProductWithCategory[]
 }
 
 export function ProductGrid({ products }: ProductGridProps) {
@@ -40,22 +36,22 @@ export function ProductGrid({ products }: ProductGridProps) {
             key={product.id}
             onClick={() => !isOutOfStock && addToCart(product)}
             disabled={isOutOfStock}
-            className={`
-              relative bg-white rounded-xl p-3 text-left transition-all
-              hover:shadow-md hover:-translate-y-0.5 active:scale-95
-              border-2 group
-              ${inCart > 0 ? "border-primary shadow-md shadow-primary/10" : "border-transparent shadow-sm"}
-              ${isOutOfStock ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
-            `}
+            className={[
+              'relative bg-white rounded-xl p-3 text-left transition-all',
+              'hover:shadow-md hover:-translate-y-0.5 active:scale-95',
+              'border-2 group',
+              inCart > 0
+                ? 'border-primary shadow-md shadow-primary/10'
+                : 'border-transparent shadow-sm',
+              isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+            ].join(' ')}
           >
-            {/* Cart quantity badge */}
             {inCart > 0 && (
               <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white rounded-full text-xs font-bold flex items-center justify-center z-10 shadow">
                 {inCart}
               </div>
             )}
 
-            {/* Product image */}
             <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-100 mb-2">
               {product.image_url ? (
                 <Image
@@ -77,7 +73,6 @@ export function ProductGrid({ products }: ProductGridProps) {
                   </span>
                 </div>
               )}
-              {/* Add button overlay */}
               {!isOutOfStock && (
                 <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors flex items-center justify-center">
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
@@ -87,7 +82,6 @@ export function ProductGrid({ products }: ProductGridProps) {
               )}
             </div>
 
-            {/* Product info */}
             <div>
               <p className="text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[2.5rem]">
                 {product.name}

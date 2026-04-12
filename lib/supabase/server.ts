@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { Database } from './database.types'
+import type { Database } from '@/types/database'
 
 export function createClient() {
   const cookieStore = cookies()
@@ -19,7 +19,7 @@ export function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Server component — read-only cookies
+            // Called from a Server Component — cookie writes are no-ops here
           }
         },
       },
